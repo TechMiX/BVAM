@@ -1,0 +1,17 @@
+<RCC>
+    <qresource prefix="/img">
+        <file>images/add.png</file>
+        <file>images/add-big.png</file>
+        <file>images/bitcoin.png</file>
+        <file>images/bitcoin-big.png</file>
+        <file>images/file.png</file>
+        <file>images/keys.png</file>
+        <file>images/likeabossmeme_trans.png</file>
+        <file>images/magic.png</file>
+        <file>images/multiply.png</file>
+        <file>images/reload.png</file>
+        <file>images/save.png</file>
+        <file>images/splitkey.png</file>
+        <file>images/splitkey-solved.png</file>
+    </qresource>
+</RCC>
