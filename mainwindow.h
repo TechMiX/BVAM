@@ -61,6 +61,7 @@ private slots:
     void copyPrefixActionSlot();
     void copyPubkActionSlot();
     void copyPkActionSlot();
+    void copyPkBase58ActionSlot();
     void sendToFactoryActionSlot();
     void removeActionSlot();
 };

@@ -110,8 +110,27 @@ QString BitcoinCrypto::getPublicKey() {
     return publicKeyString;
 }
 
-QString BitcoinCrypto::getPrivateKey() {
-    return privateKeyString;
+QString BitcoinCrypto::getPrivateKey(bool base58encoded) {
+    QString result;
+    if (!base58encoded)
+        result = privateKeyString;
+    else {
+        unsigned char eckey_buf[128];
+        const BIGNUM *bn;
+        int nbytes;
+
+        bn = EC_KEY_get0_private_key(keyPairs);
+
+        eckey_buf[0] = 128;
+        nbytes = BN_num_bytes(bn);
+
+        if (nbytes < 32)
+            memset(eckey_buf + 1, 0, 32 - nbytes);
+
+        BN_bn2bin(bn, &eckey_buf[33 - nbytes]);
+        result = encodeToBase58String(eckey_buf, 33);
+    }
+    return result;
 }
 
 void BitcoinCrypto::setPublicKey(QString pk) {
@@ -167,21 +186,12 @@ bool BitcoinCrypto::isHex(QString s) {
     return result;
 }
 
-// Thanks to samr7 <samr7@cs.washington.edu>
 QString BitcoinCrypto::getBitcoinAddress() {
     unsigned char eckey_buf[128], *pend;
     unsigned char binres[21] = {0,};
-    unsigned char *binres2;
     unsigned char hash1[32];
-    unsigned char hash2[32];
-    char b58_alphabet[59] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-    char result[35];
-    int brlen, zpfx, d, p, len;
+    int len;
     void* buf;
-
-    BN_CTX *bnctx;
-    BIGNUM *bn, *bndiv, *bntmp;
-    BIGNUM bna, bnb, bnbase, bnrem;
 
     pend = eckey_buf;
 
@@ -198,6 +208,22 @@ QString BitcoinCrypto::getBitcoinAddress() {
 
     len = sizeof(binres);
     buf = &binres;
+
+    return encodeToBase58String(buf, len);
+}
+
+// Thanks to samr7 <samr7@cs.washington.edu>
+QString BitcoinCrypto::encodeToBase58String(void* buf, int len) {
+    unsigned char *binres2;
+    unsigned char hash1[32];
+    unsigned char hash2[32];
+    char b58_alphabet[59] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+    char result[128];
+    int brlen, zpfx, d, p;
+
+    BN_CTX *bnctx;
+    BIGNUM *bn, *bndiv, *bntmp;
+    BIGNUM bna, bnb, bnbase, bnrem;
 
     bnctx = BN_CTX_new();
     BN_init(&bna);
@@ -246,4 +272,5 @@ QString BitcoinCrypto::getBitcoinAddress() {
     BN_CTX_free(bnctx);
 
     return QString::fromAscii(result);
+
 }

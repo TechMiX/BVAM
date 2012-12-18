@@ -18,7 +18,7 @@ public:
     void setPublicKey(QString);
     void setPrivateKey(QString);
     QString getPublicKey();
-    QString getPrivateKey();
+    QString getPrivateKey(bool base58encoded = false);
     QString getBitcoinAddress();
     bool isHex(QString);
 
@@ -30,6 +30,7 @@ private:
     EC_KEY *keyPairs;
     void makePrivateKeyString();
     void makePublicKeyString();
+    QString encodeToBase58String(void* buf, int len);
     QString publicKeyString;
     QString privateKeyString;
 };

@@ -28,7 +28,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->tableView->horizontalHeader()->resizeSection(2, 100);
     ui->tableView->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    QAction *copyPkAction = new QAction(tr("Copy Private key"), this);
+    QAction *copyPkAction = new QAction(tr("Copy Private key (Hex)"), this);
+    QAction *copyPkBase58Action = new QAction(tr("Copy Private key (Base58)"), this);
     QAction *sendToFactoryAction = new QAction(tr("Send to Factory"), this);
     QAction *removeAction = new QAction(tr("Remove"), this);
     QAction *copyPubkAction = new QAction(tr("Copy Public key"), this);
@@ -44,9 +45,11 @@ MainWindow::MainWindow(QWidget *parent) :
     contextMenu->addAction(copyPubkAction);
     contextMenu->addAction(sendToFactoryAction);
     contextMenu->addAction(copyPkAction);
+    contextMenu->addAction(copyPkBase58Action);
     contextMenu->addAction(removeAction);
 
     connect(copyPkAction, SIGNAL(triggered()), this, SLOT(copyPkActionSlot()));
+    connect(copyPkBase58Action, SIGNAL(triggered()), this, SLOT(copyPkBase58ActionSlot()));
     connect(sendToFactoryAction, SIGNAL(triggered()), this, SLOT(sendToFactoryActionSlot()));
     connect(removeAction, SIGNAL(triggered()), this, SLOT(removeActionSlot()));
     connect(copyPubkAction, SIGNAL(triggered()), this, SLOT(copyPubkActionSlot()));
@@ -345,11 +348,20 @@ void MainWindow::copyBtcAdActionSlot() {
         QApplication::clipboard()->setText(bc.getBitcoinAddress());
     }
 }
+
 void MainWindow::copyPubkActionSlot() {
     QModelIndexList selection = ui->tableView->selectionModel()->selectedRows(1);
     if(!selection.isEmpty()) {
         bc.setPrivateKey(selection.at(0).data(0).toString());
         QApplication::clipboard()->setText(bc.getPublicKey());
+    }
+}
+
+void MainWindow::copyPkBase58ActionSlot() {
+    QModelIndexList selection = ui->tableView->selectionModel()->selectedRows(1);
+    if(!selection.isEmpty()) {
+        bc.setPrivateKey(selection.at(0).data(0).toString());
+        QApplication::clipboard()->setText(bc.getPrivateKey(true));
     }
 }
 
