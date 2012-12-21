@@ -220,28 +220,16 @@ void MainWindow::on_btnSaveToFile_released()
     QByteArray digest = QCryptographicHash::hash(dbData.toUtf8(), QCryptographicHash::Md5);
 
     // database version
-    dbData += "\r$1$";
+    dbData += "\r$2$";
 
-    // hash from table data for error detecting
+    // hash from table data for error detecting.
+    // must be the last DB property.
     dbData += "\r$" + QString(digest.toHex()) + "$";
 
     // end sign of db
     dbData += "\r$\r$\r$";
 
-    unsigned char outdata[dbData.length()+1];
-    unsigned char ckeyHash[256];
-    unsigned char ivec[] = "testtesttesttest";
-    int encryptPos = 0;
-
-    AES_KEY key;
-    SHA256(reinterpret_cast<const unsigned char*>(password.toStdString().c_str()), password.length(), ckeyHash);
-    AES_set_encrypt_key(ckeyHash, 256, &key);
-    AES_cfb128_encrypt(reinterpret_cast<const unsigned char*>(dbData.toStdString().c_str()),
-                       outdata,
-                       dbData.length(),
-                       &key, ivec, &encryptPos, AES_ENCRYPT);
-
-    file.write(QByteArray::fromRawData(reinterpret_cast<char*>(outdata), sizeof(outdata)));
+    file.write(AESCrypt(dbData.toLocal8Bit(), password));
 
     file.close();
 
@@ -283,21 +271,8 @@ void MainWindow::on_btnLoadFromFile_released()
     QByteArray fileData = file.readAll();
     file.close();
 
-    QString dbData;
-    unsigned char dbDataChars[fileData.length()+1];
-    unsigned char ckeyHash[256];
-    unsigned char ivec[] = "testtesttesttest";
-    int encryptPos = 0;
+    QString dbData = QString(AESCrypt(fileData, password, true));
 
-    AES_KEY key;
-    SHA256(reinterpret_cast<const unsigned char*>(password.toStdString().c_str()), password.length(), ckeyHash);
-    AES_set_encrypt_key(ckeyHash, 256, &key);
-    AES_cfb128_encrypt(reinterpret_cast<const unsigned char*>(fileData.data()),
-                       dbDataChars,
-                       fileData.length(),
-                       &key, ivec, &encryptPos, AES_DECRYPT);
-
-    dbData = QString(reinterpret_cast<const char*>(dbDataChars));
     dbData.truncate(dbData.indexOf("\r$\r$\r$"));
 
     QString tempData = dbData;
@@ -305,7 +280,7 @@ void MainWindow::on_btnLoadFromFile_released()
 
     QByteArray digest = QCryptographicHash::hash(tempData.toUtf8(), QCryptographicHash::Md5);
     if (!dbData.endsWith("$" + QString(digest.toHex()) + "$")) {
-        QMessageBox::critical(this, tr("Error"), tr("File corrupted!\nApparently password was wrong."));
+        QMessageBox::critical(this, tr("Error"), tr("File is corrupted!\nMaybe password was wrong."));
         return;
     }
 
@@ -417,4 +392,54 @@ void MainWindow::addRowToTable(QString prefix, QString privatekey, bool solved) 
     else
         ql.append(new QStandardItem(QIcon(":/img/images/splitkey.png"), QString(tr("Unsolved"))));
     prefixTable.insertRow(0, ql);
+}
+
+QByteArray MainWindow::AESCrypt(const QByteArray input, QString password, bool decrypt) {
+    QByteArray output;
+    const unsigned char ivector[] = "BVAMBVAMBVAMBVAM";
+    unsigned char ckeyHash[256];
+    int cLen = 0, fLen = 0;
+    EVP_CIPHER_CTX cipherContext;
+
+
+    EVP_CIPHER_CTX_init( &cipherContext );
+    output.resize(input.length() + AES_BLOCK_SIZE + 100);
+    SHA256(reinterpret_cast<const unsigned char*>(password.toStdString().c_str()), password.length(), ckeyHash);
+
+    if (!decrypt) {
+        EVP_EncryptInit_ex(&cipherContext,
+                           EVP_aes_256_cbc(), NULL,
+                           reinterpret_cast<const unsigned char*>(ckeyHash), ivector);
+
+        EVP_EncryptUpdate(&cipherContext,
+                          reinterpret_cast<unsigned char*>(output.data()),
+                          &cLen,
+                          reinterpret_cast<const unsigned char*>(input.constData()),
+                          input.length());
+
+        EVP_CipherFinal_ex(&cipherContext,
+                           reinterpret_cast<unsigned char*>(output.data()) + cLen,
+                           &fLen);
+
+    } else {
+        EVP_DecryptInit_ex(&cipherContext,
+                           EVP_aes_256_cbc(), NULL,
+                           reinterpret_cast<const unsigned char*>(ckeyHash), ivector);
+
+        EVP_DecryptUpdate(&cipherContext,
+                          reinterpret_cast<unsigned char*>(output.data()),
+                          &cLen,
+                          reinterpret_cast<const unsigned char*>(input.constData()),
+                          input.length());
+
+        EVP_DecryptFinal_ex(&cipherContext,
+                           reinterpret_cast<unsigned char*>(output.data()) + cLen,
+                           &fLen);
+
+    }
+
+    EVP_CIPHER_CTX_cleanup(&cipherContext);
+    output.resize(cLen + fLen);
+
+    return output;
 }

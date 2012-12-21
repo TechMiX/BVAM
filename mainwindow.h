@@ -14,6 +14,7 @@
 #include <QMenu>
 #include <QDesktopWidget>
 #include <openssl/aes.h>
+#include <openssl/evp.h>
 #include "BitcoinCrypto.h"
 #include "newprefixdialog.h"
 #include "solvedialog.h"
@@ -44,6 +45,7 @@ private:
 
     void copyDataFromTable(int column);
     void addRowToTable(QString prefix, QString privatekey, bool solved = false);
+    QByteArray AESCrypt(const QByteArray input, QString password, bool decrypt = false);
 
 private slots:
     void on_btnLoadFromFile_released();
