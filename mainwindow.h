@@ -39,6 +39,7 @@ private:
     QStandardItemModel prefixTable;
     QMenu *contextMenu;
     QAction *copyBtcAdAction;
+    QAction *copyPkBase58Action;
     QAction *showSolveDialogAction;
     QAction *copyPrefixAction;
     QTimer timer;

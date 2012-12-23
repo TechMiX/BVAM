@@ -29,14 +29,15 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->tableView->setContextMenuPolicy(Qt::CustomContextMenu);
 
     QAction *copyPkAction = new QAction(tr("Copy Private key (Hex)"), this);
-    QAction *copyPkBase58Action = new QAction(tr("Copy Private key (Base58)"), this);
     QAction *sendToFactoryAction = new QAction(tr("Send to Factory"), this);
     QAction *removeAction = new QAction(tr("Remove"), this);
     QAction *copyPubkAction = new QAction(tr("Copy Public key"), this);
+    copyPkBase58Action = new QAction(tr("Copy Private key (Base58)"), this);
     showSolveDialogAction = new QAction(tr("Solve"), this);
     copyBtcAdAction = new QAction(tr("Copy Bitcoin Address"), this);
     copyPrefixAction = new QAction(tr("Copy Prefix"), this);
     copyBtcAdAction->setVisible(false);
+    copyPkBase58Action->setVisible(false);
 
     contextMenu = new QMenu();
     contextMenu->addAction(showSolveDialogAction);
@@ -95,11 +96,13 @@ void MainWindow::on_tableView_customContextMenuRequested(QPoint pos)
                 copyPrefixAction->setVisible(false);
                 showSolveDialogAction->setVisible(false);
                 copyBtcAdAction->setVisible(true);
+                copyPkBase58Action->setVisible(true);
             }
         contextMenu->exec(QCursor::pos());
         copyPrefixAction->setVisible(true);
         showSolveDialogAction->setVisible(true);
         copyBtcAdAction->setVisible(false);
+        copyPkBase58Action->setVisible(false);
     }
 }
 
