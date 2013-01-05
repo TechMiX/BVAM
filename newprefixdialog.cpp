@@ -52,12 +52,23 @@ void NewPrefixDialog::on_txtPrivKey_textChanged()
 
 void NewPrefixDialog::on_btnAdd_released()
 {
-    if (ui->txtPubKey->toPlainText().length() > 129 &&
-        ui->txtPrivKey->toPlainText().length() > 63 &&
-        ui->txDesPref->text().length() > 1) {
+    bool prefixCheck = false, privCheck = false, pubCheck = false;
+
+    if (ui->txDesPref->text().length() > 1)
+        prefixCheck = true;
+
+    if (ui->txtPrivKey->toPlainText().isEmpty()) {
+        if (ui->txtPubKey->toPlainText().length() > 129)
+            pubCheck = true;
+    } else {
+        if (ui->txtPrivKey->toPlainText().length() > 63)
+            privCheck = true;
+    }
+
+    if (prefixCheck && (pubCheck || privCheck)) {
         addOk = true;
         this->hide();
     }
     else
-        QMessageBox::warning( this, "Error", "One of the boxes is empty or input is too short!" );
+        QMessageBox::warning( this, "Error", "No key entered or input is too short!" );
 }

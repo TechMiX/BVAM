@@ -15,8 +15,11 @@ class SolveDialog : public QDialog
 
 public:
     explicit SolveDialog(QWidget *parent = 0);
-    void setPrefPriv(QString prefixValue, QString privatekeyValue);
+    void setPrefPrivPub(QString prefixValue,
+                        QString privatekeyValue,
+                        QString publickeyValue);
     QString getPrivateKey();
+    QString getPublicKey();
     ~SolveDialog();
     bool solveOk;
 
@@ -25,6 +28,7 @@ private:
     BitcoinCrypto bc;
     QString prefix;
     QString privatekey;
+    QString publickey;
 
 
 private slots:

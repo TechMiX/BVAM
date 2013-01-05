@@ -12,9 +12,11 @@ MainWindow::MainWindow(QWidget *parent) :
     position.moveCenter(QDesktopWidget().availableGeometry().center());
     move(position.topLeft());
 
-    prefixTable.setHorizontalHeaderItem(0, new QStandardItem(QString(tr("Prefix"))));
-    prefixTable.setHorizontalHeaderItem(1, new QStandardItem(QString(tr("Private Key"))));
-    prefixTable.setHorizontalHeaderItem(2, new QStandardItem(QString(tr("Status"))));
+    prefixTable.setHorizontalHeaderItem(0, new QStandardItem(QString(tr("Network Byte"))));
+    prefixTable.setHorizontalHeaderItem(1, new QStandardItem(QString(tr("Prefix"))));
+    prefixTable.setHorizontalHeaderItem(2, new QStandardItem(QString(tr("Private Key"))));
+    prefixTable.setHorizontalHeaderItem(3, new QStandardItem(QString(tr("Public Key"))));
+    prefixTable.setHorizontalHeaderItem(4, new QStandardItem(QString(tr("Status"))));
     ui->tableView->setModel(&prefixTable);
     ui->tableView->setAlternatingRowColors(true);
     ui->tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -22,21 +24,28 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
     ui->tableView->verticalHeader()->hide();
     ui->tableView->setSortingEnabled(true);
+    ui->tableView->setColumnHidden(0, true); // Hide Network Byte
+    ui->tableView->setColumnHidden(2, true); // Hide Private Key
+    ui->tableView->setColumnHidden(3, true); // Hide Public Key
     ui->tableView->resizeColumnsToContents();
-    ui->tableView->horizontalHeader()->resizeSection(0, 90);
-    ui->tableView->horizontalHeader()->setResizeMode(1, QHeaderView::Stretch);
+    ui->tableView->horizontalHeader()->resizeSection(0, 40);
+    ui->tableView->horizontalHeader()->resizeSection(1, 100);
     ui->tableView->horizontalHeader()->resizeSection(2, 100);
+    ui->tableView->horizontalHeader()->resizeSection(3, 100);
+    ui->tableView->horizontalHeader()->setResizeMode(4, QHeaderView::Stretch);
     ui->tableView->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    QAction *copyPkAction = new QAction(tr("Copy Private key (Hex)"), this);
     QAction *sendToFactoryAction = new QAction(tr("Send to Factory"), this);
     QAction *removeAction = new QAction(tr("Remove"), this);
-    QAction *copyPubkAction = new QAction(tr("Copy Public key"), this);
+    copyPubkAction = new QAction(tr("Copy Public key"), this);
+    copyPkAction = new QAction(tr("Copy Private key (Hex)"), this);
     copyPkBase58Action = new QAction(tr("Copy Private key (Base58)"), this);
     showSolveDialogAction = new QAction(tr("Solve"), this);
     copyBtcAdAction = new QAction(tr("Copy Bitcoin Address"), this);
     copyPrefixAction = new QAction(tr("Copy Prefix"), this);
     copyBtcAdAction->setVisible(false);
+    copyPubkAction->setVisible(false);
+    copyPkAction->setVisible(false);
     copyPkBase58Action->setVisible(false);
 
     contextMenu = new QMenu();
@@ -90,19 +99,38 @@ void MainWindow::on_tableView_customContextMenuRequested(QPoint pos)
 {
     QModelIndex index = ui->tableView->indexAt(pos);
     if(index.isValid()) {
-        QModelIndexList selection = ui->tableView->selectionModel()->selectedRows(2);
-        if(!selection.isEmpty())
-            if (selection.at(0).data(0).toString() == tr("Solved")) {
+        QModelIndexList selection = ui->tableView->selectionModel()->selectedRows(4);
+        QString status, privKey, pubKey;
+        if(!selection.isEmpty()) {
+            status = selection.at(0).data(0).toString();
+            pubKey = ui->tableView->selectionModel()->selectedRows(3).at(0).data(0).toString();
+            privKey = ui->tableView->selectionModel()->selectedRows(2).at(0).data(0).toString();
+
+            if (pubKey.isEmpty())
+                copyPubkAction->setVisible(false);
+            else
+                copyPubkAction->setVisible(true);
+
+            if(privKey.isEmpty())
+                copyPkAction->setVisible(false);
+            else
+                copyPkAction->setVisible(true);
+
+            if (status == tr("Solved")) {
                 copyPrefixAction->setVisible(false);
                 showSolveDialogAction->setVisible(false);
                 copyBtcAdAction->setVisible(true);
-                copyPkBase58Action->setVisible(true);
+                if (!privKey.isEmpty())
+                    copyPkBase58Action->setVisible(true);
+            } else {
+                copyPrefixAction->setVisible(true);
+                showSolveDialogAction->setVisible(true);
+                copyBtcAdAction->setVisible(false);
+                copyPkBase58Action->setVisible(false);
             }
-        contextMenu->exec(QCursor::pos());
-        copyPrefixAction->setVisible(true);
-        showSolveDialogAction->setVisible(true);
-        copyBtcAdAction->setVisible(false);
-        copyPkBase58Action->setVisible(false);
+
+            contextMenu->exec(QCursor::pos());
+        }
     }
 }
 
@@ -175,7 +203,7 @@ void MainWindow::on_btnNewPrefix_released()
         bc.setPublicKey(sl.at(2));
         if (bc.getBitcoinAddress().startsWith(sl.at(0)))
             status = true;
-        addRowToTable(sl.at(0), sl.at(1), status);
+        addRowToTable("00", sl.at(0), sl.at(1), sl.at(2), status);
     }
 }
 
@@ -210,29 +238,7 @@ void MainWindow::on_btnSaveToFile_released()
         return;
     }
 
-    QString dbData = "";
-    for(int i=0; i<prefixTable.rowCount(); ++i) {
-        for(int j=0; j<prefixTable.columnCount()-1; ++j) {
-            if(j!=0)
-                dbData += ";";
-            dbData += prefixTable.index(i,j).data(0).toString();
-        }
-        dbData += "\n";
-    }
-
-    QByteArray digest = QCryptographicHash::hash(dbData.toUtf8(), QCryptographicHash::Md5);
-
-    // database version
-    dbData += "\r$2$";
-
-    // hash from table data for error detecting.
-    // must be the last DB property.
-    dbData += "\r$" + QString(digest.toHex()) + "$";
-
-    // end sign of db
-    dbData += "\r$\r$\r$";
-
-    file.write(AESCrypt(dbData.toLocal8Bit(), password));
+    file.write(dataBase.getEncryptedData(password));
 
     file.close();
 
@@ -274,41 +280,40 @@ void MainWindow::on_btnLoadFromFile_released()
     QByteArray fileData = file.readAll();
     file.close();
 
-    QString dbData = QString(AESCrypt(fileData, password, true));
-
-    dbData.truncate(dbData.indexOf("\r$\r$\r$"));
-
-    QString tempData = dbData;
-    tempData.truncate(dbData.indexOf("\r$"));
-
-    QByteArray digest = QCryptographicHash::hash(tempData.toUtf8(), QCryptographicHash::Md5);
-    if (!dbData.endsWith("$" + QString(digest.toHex()) + "$")) {
+    VanityDB tempDataBase;
+    if (!tempDataBase.setEncryptedData(fileData, password)) {
         QMessageBox::critical(this, tr("Error"), tr("File is corrupted!\nMaybe password was wrong."));
         return;
     }
 
-    dbData = tempData;
+    for (int i=0; i<tempDataBase.getRecordCount(); i++) {
 
-    QStringList sl0 = dbData.split("\n");
-    for (int i=0; i<sl0.length()-1; i++) {
-        QStringList sl = sl0.at(i).split(";");
+        QString networkByte = tempDataBase.getRecord(i, VanityDB::networkByte);
+        QString prefix = tempDataBase.getRecord(i, VanityDB::prefix);
+        QString privateKey = tempDataBase.getRecord(i, VanityDB::privateKey);
+        QString publicKey = tempDataBase.getRecord(i, VanityDB::publicKey);
+
         bool status = false;
-        bc.setPrivateKey(sl.at(1));
-        if (bc.getBitcoinAddress().startsWith(sl.at(0)))
+        bc.setPrivateKey(privateKey);
+        if (bc.getBitcoinAddress().startsWith(prefix))
             status = true;
-        addRowToTable(sl.at(0), sl.at(1), status);
+        addRowToTable(networkByte, prefix, privateKey, publicKey, status);
     }
 
     QMessageBox::information(this, tr("Success"), tr("Vanity database was successfully loaded."));
 
 }
 
+void MainWindow::copyPubkActionSlot() {
+    copyDataFromTable(3);
+}
+
 void MainWindow::copyPkActionSlot() {
-    copyDataFromTable(1);
+    copyDataFromTable(2);
 }
 
 void MainWindow::copyPrefixActionSlot() {
-    copyDataFromTable(0);
+    copyDataFromTable(1);
 }
 
 void MainWindow::resetTxtStyleSheetsSlot() {
@@ -320,23 +325,20 @@ void MainWindow::resetTxtStyleSheetsSlot() {
 }
 
 void MainWindow::copyBtcAdActionSlot() {
-    QModelIndexList selection = ui->tableView->selectionModel()->selectedRows(1);
+    QModelIndexList selection = ui->tableView->selectionModel()->selectedRows(2);
     if(!selection.isEmpty()) {
-        bc.setPrivateKey(selection.at(0).data(0).toString());
+        if (!selection.at(0).data(0).toString().isEmpty()) {
+            bc.setPrivateKey(selection.at(0).data(0).toString());
+        } else {
+            selection = ui->tableView->selectionModel()->selectedRows(3);
+            bc.setPublicKey(selection.at(0).data(0).toString());
+        }
         QApplication::clipboard()->setText(bc.getBitcoinAddress());
     }
 }
 
-void MainWindow::copyPubkActionSlot() {
-    QModelIndexList selection = ui->tableView->selectionModel()->selectedRows(1);
-    if(!selection.isEmpty()) {
-        bc.setPrivateKey(selection.at(0).data(0).toString());
-        QApplication::clipboard()->setText(bc.getPublicKey());
-    }
-}
-
 void MainWindow::copyPkBase58ActionSlot() {
-    QModelIndexList selection = ui->tableView->selectionModel()->selectedRows(1);
+    QModelIndexList selection = ui->tableView->selectionModel()->selectedRows(2);
     if(!selection.isEmpty()) {
         bc.setPrivateKey(selection.at(0).data(0).toString());
         QApplication::clipboard()->setText(bc.getPrivateKey(true));
@@ -344,40 +346,46 @@ void MainWindow::copyPkBase58ActionSlot() {
 }
 
 void MainWindow::solveActionSlot() {
-
-    QString prefix = ui->tableView->selectionModel()->selectedRows(0).at(0).data(0).toString();
-    slvDialog->setPrefPriv(prefix,
-                           ui->tableView->selectionModel()->selectedRows(1).at(0).data(0).toString());
+    QString prefix = ui->tableView->selectionModel()->selectedRows(1).at(0).data(0).toString();
+    slvDialog->setPrefPrivPub(prefix,
+                           ui->tableView->selectionModel()->selectedRows(2).at(0).data(0).toString(),
+                           ui->tableView->selectionModel()->selectedRows(3).at(0).data(0).toString());
     slvDialog->exec();
     QString finalPrivateKey = slvDialog->getPrivateKey();
-    if (!finalPrivateKey.isEmpty()) {
+    QString finalPublicKey = slvDialog->getPublicKey();
+    if (!finalPrivateKey.isEmpty() || !finalPublicKey.isEmpty()) {
         prefixTable.removeRow(ui->tableView->selectionModel()->currentIndex().row());
-        addRowToTable(prefix, finalPrivateKey, true);
+        addRowToTable("00", prefix, finalPrivateKey, finalPublicKey, true);
     }
 }
 
 void MainWindow::sendToFactoryActionSlot() {
-    QModelIndexList selection = ui->tableView->selectionModel()->selectedRows(1);
+    QModelIndexList selection = ui->tableView->selectionModel()->selectedRows(2);
     if(!selection.isEmpty()) {
-        QString pk = selection.at(0).data(0).toString();
-        ui->txtPrivKey->setPlainText(pk);
-        ui->txtPubKey->setPlainText("");
+        QString privKey = selection.at(0).data(0).toString();
+        QString pubKey = ui->tableView->selectionModel()->selectedRows(3).at(0).data(0).toString();
+        ui->txtPrivKey->setPlainText(privKey);
+        ui->txtPubKey->setPlainText(pubKey);
         ui->txtSolution->setPlainText("");
         ui->tabWidget->setCurrentIndex(1);
-        on_btnBitcoinAddress_released();
     }
 }
 
 void MainWindow::removeActionSlot() {
-    QModelIndexList selection = ui->tableView->selectionModel()->selectedRows(0);
+    QModelIndexList selection = ui->tableView->selectionModel()->selectedRows(1);
     if(!selection.isEmpty())
         if (QMessageBox::warning(this,
                                  tr("Remove address"),
                                  tr("Are you sure you want to remove '") + selection.at(0).data(0).toString() +
-                                 tr("'?\nYour private key for this address will be removed too!"),
+                                 tr("'?\nYour keys for this address will be removed too!"),
                                  QMessageBox::Cancel,
-                                 QMessageBox::Ok) == QMessageBox::Ok)
+                                 QMessageBox::Ok) == QMessageBox::Ok) {
             prefixTable.removeRow(ui->tableView->selectionModel()->currentIndex().row());
+            dataBase.removeAllRecords(ui->tableView->selectionModel()->selectedRows(0).at(0).data(0).toString(),
+                                      selection.at(0).data(0).toString(),
+                                      ui->tableView->selectionModel()->selectedRows(2).at(0).data(0).toString(),
+                                      ui->tableView->selectionModel()->selectedRows(3).at(0).data(0).toString());
+        }
 }
 
 void MainWindow::copyDataFromTable(int column) {
@@ -386,63 +394,16 @@ void MainWindow::copyDataFromTable(int column) {
         QApplication::clipboard()->setText(selection.at(0).data(0).toString());
 }
 
-void MainWindow::addRowToTable(QString prefix, QString privatekey, bool solved) {
+void MainWindow::addRowToTable(QString networkByte, QString prefix, QString privatekey, QString publickey, bool solved) {
     QList<QStandardItem*> ql;
+    ql.append(new QStandardItem(QString(networkByte)));
     ql.append(new QStandardItem(QString(prefix)));
     ql.append(new QStandardItem(QString(privatekey)));
+    ql.append(new QStandardItem(QString(publickey)));
     if (solved)
         ql.append(new QStandardItem(QIcon(":/img/images/splitkey-solved.png"), QString(tr("Solved"))));
     else
         ql.append(new QStandardItem(QIcon(":/img/images/splitkey.png"), QString(tr("Unsolved"))));
     prefixTable.insertRow(0, ql);
-}
-
-QByteArray MainWindow::AESCrypt(const QByteArray input, QString password, bool decrypt) {
-    QByteArray output;
-    const unsigned char ivector[] = "BVAMBVAMBVAMBVAM";
-    unsigned char ckeyHash[256];
-    int cLen = 0, fLen = 0;
-    EVP_CIPHER_CTX cipherContext;
-
-
-    EVP_CIPHER_CTX_init( &cipherContext );
-    output.resize(input.length() + AES_BLOCK_SIZE + 100);
-    SHA256(reinterpret_cast<const unsigned char*>(password.toStdString().c_str()), password.length(), ckeyHash);
-
-    if (!decrypt) {
-        EVP_EncryptInit_ex(&cipherContext,
-                           EVP_aes_256_cbc(), NULL,
-                           reinterpret_cast<const unsigned char*>(ckeyHash), ivector);
-
-        EVP_EncryptUpdate(&cipherContext,
-                          reinterpret_cast<unsigned char*>(output.data()),
-                          &cLen,
-                          reinterpret_cast<const unsigned char*>(input.constData()),
-                          input.length());
-
-        EVP_CipherFinal_ex(&cipherContext,
-                           reinterpret_cast<unsigned char*>(output.data()) + cLen,
-                           &fLen);
-
-    } else {
-        EVP_DecryptInit_ex(&cipherContext,
-                           EVP_aes_256_cbc(), NULL,
-                           reinterpret_cast<const unsigned char*>(ckeyHash), ivector);
-
-        EVP_DecryptUpdate(&cipherContext,
-                          reinterpret_cast<unsigned char*>(output.data()),
-                          &cLen,
-                          reinterpret_cast<const unsigned char*>(input.constData()),
-                          input.length());
-
-        EVP_DecryptFinal_ex(&cipherContext,
-                           reinterpret_cast<unsigned char*>(output.data()) + cLen,
-                           &fLen);
-
-    }
-
-    EVP_CIPHER_CTX_cleanup(&cipherContext);
-    output.resize(cLen + fLen);
-
-    return output;
+    dataBase.addRecord(networkByte, prefix, privatekey, publickey);
 }

@@ -13,11 +13,10 @@
 #include <QTimer>
 #include <QMenu>
 #include <QDesktopWidget>
-#include <openssl/aes.h>
-#include <openssl/evp.h>
 #include "BitcoinCrypto.h"
 #include "newprefixdialog.h"
 #include "solvedialog.h"
+#include "vanitydb.h"
 
 namespace Ui {
     class MainWindow;
@@ -34,19 +33,25 @@ public:
 private:
     Ui::MainWindow *ui;
     BitcoinCrypto bc;
+    VanityDB dataBase;
     NewPrefixDialog* npDialog;
     SolveDialog* slvDialog;
     QStandardItemModel prefixTable;
     QMenu *contextMenu;
     QAction *copyBtcAdAction;
+    QAction *copyPubkAction;
+    QAction *copyPkAction;
     QAction *copyPkBase58Action;
     QAction *showSolveDialogAction;
     QAction *copyPrefixAction;
     QTimer timer;
 
     void copyDataFromTable(int column);
-    void addRowToTable(QString prefix, QString privatekey, bool solved = false);
-    QByteArray AESCrypt(const QByteArray input, QString password, bool decrypt = false);
+    void addRowToTable(QString networkByte,
+                       QString prefix,
+                       QString privatekey,
+                       QString publicKey,
+                       bool solved = false);
 
 private slots:
     void on_btnLoadFromFile_released();
@@ -66,7 +71,7 @@ private slots:
     void copyPkActionSlot();
     void copyPkBase58ActionSlot();
     void sendToFactoryActionSlot();
-    void removeActionSlot();
+    void removeActionSlot();    
 };
 
 #endif // MAINWINDOW_H

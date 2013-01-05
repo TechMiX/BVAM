@@ -14,12 +14,14 @@ SOURCES += main.cpp\
         mainwindow.cpp \
 	BitcoinCrypto.cpp \
     newprefixdialog.cpp \
-    solvedialog.cpp
+    solvedialog.cpp \
+    vanitydb.cpp
 
 HEADERS  += mainwindow.h \
 	 BitcoinCrypto.h \
     newprefixdialog.h \
-    solvedialog.h
+    solvedialog.h \
+    vanitydb.h
 
 FORMS    += mainwindow.ui \
     newprefixdialog.ui \
