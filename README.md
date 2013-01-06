@@ -45,6 +45,8 @@ License
 
 This software is licensed under [GNU General Public License v3](http://www.gnu.org/licenses/gpl.txt).
 
+It includes software developed by the [OpenSSL Project](http://www.openssl.org/) and cryptographic software written by Eric Young (eay@cryptsoft.com).
+
 Donation
 --------
 
