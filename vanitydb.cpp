@@ -50,7 +50,14 @@ QByteArray VanityDB::getEncryptedData(QString password) {
 }
 
 QString VanityDB::getRecord(int recordNumber, VanityDBFields field) {
-    return records.at(recordNumber).split(fieldDelim).at(field);
+    if (recordNumber<getRecordCount()) {
+        QStringList recordFields = records.at(recordNumber).split(fieldDelim);
+        if(field<recordFields.size())
+            return recordFields.at(field);
+        else
+            return "";
+    } else
+        return "";
 }
 
 void VanityDB::rebuildData() {
