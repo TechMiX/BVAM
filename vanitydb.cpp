@@ -31,6 +31,10 @@ int VanityDB::getRecordCount() {
     return records.count();
 }
 
+QStringList VanityDB::getAllFields() {
+    return records.join(fieldDelim).split(fieldDelim);
+}
+
 QStringList VanityDB::getRecords() {
     return records;
 }

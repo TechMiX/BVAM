@@ -13,6 +13,8 @@
 #include <QTimer>
 #include <QMenu>
 #include <QDesktopWidget>
+#include <QSortFilterProxyModel>
+#include <QCompleter>
 #include "BitcoinCrypto.h"
 #include "newprefixdialog.h"
 #include "solvedialog.h"
@@ -37,6 +39,7 @@ private:
     NewPrefixDialog* npDialog;
     SolveDialog* slvDialog;
     QStandardItemModel prefixTable;
+    QSortFilterProxyModel proxyModel;
     QMenu *contextMenu;
     QAction *copyBtcAdAction;
     QAction *copyPubkAction;
@@ -45,6 +48,7 @@ private:
     QAction *showSolveDialogAction;
     QAction *copyPrefixAction;
     QTimer timer;
+    bool tableOnProxy;
 
     void copyDataFromTable(int column);
     void addRowToTable(QString networkByte,
@@ -54,6 +58,7 @@ private:
                        bool solved = false);
 
 private slots:
+    void on_txtSearch_textChanged(QString );
     void on_btnLoadFromFile_released();
     void on_btnSaveToFile_released();
     void on_btnNewPrefix_released();

@@ -41,6 +41,7 @@ public:
     QString getData();
     QString getRecord(int recordNumber, VanityDBFields field = prefix);
     QStringList getRecords();
+    QStringList getAllFields();
     int getRecordCount();
     bool isEmpty();
     int getVersion();

@@ -17,6 +17,7 @@ MainWindow::MainWindow(QWidget *parent) :
     prefixTable.setHorizontalHeaderItem(2, new QStandardItem(QString(tr("Private Key"))));
     prefixTable.setHorizontalHeaderItem(3, new QStandardItem(QString(tr("Public Key"))));
     prefixTable.setHorizontalHeaderItem(4, new QStandardItem(QString(tr("Status"))));
+    tableOnProxy = false;
     ui->tableView->setModel(&prefixTable);
     ui->tableView->setAlternatingRowColors(true);
     ui->tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -207,6 +208,24 @@ void MainWindow::on_btnNewPrefix_released()
     }
 }
 
+void MainWindow::on_txtSearch_textChanged(QString searchText)
+{
+    QCompleter *completer = new QCompleter(dataBase.getAllFields(), this);
+    completer->setCaseSensitivity(Qt::CaseInsensitive);
+    ui->txtSearch->setCompleter(completer);
+
+    if (!searchText.isEmpty()) {
+        proxyModel.setSourceModel(&prefixTable);
+        proxyModel.setFilterKeyColumn(-1);
+        proxyModel.setFilterFixedString(searchText);
+        ui->tableView->setModel(&proxyModel);
+        tableOnProxy = true;
+    } else {
+        ui->tableView->setModel(&prefixTable);
+        tableOnProxy = false;
+    }
+}
+
 void MainWindow::on_btnSaveToFile_released()
 {
     QString filename = QFileDialog::getSaveFileName(this,
@@ -384,7 +403,10 @@ void MainWindow::removeActionSlot() {
                                       selection.at(0).data(0).toString(),
                                       ui->tableView->selectionModel()->selectedRows(2).at(0).data(0).toString(),
                                       ui->tableView->selectionModel()->selectedRows(3).at(0).data(0).toString());
-            prefixTable.removeRow(ui->tableView->selectionModel()->currentIndex().row());
+            if (tableOnProxy)
+                prefixTable.removeRow(proxyModel.mapToSource(ui->tableView->selectionModel()->currentIndex()).row());
+            else
+                prefixTable.removeRow(ui->tableView->selectionModel()->currentIndex().row());
         }
 }
 
