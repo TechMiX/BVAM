@@ -23,6 +23,10 @@ void VanityDB::clear() {
     data = "";
 }
 
+bool VanityDB::isEmpty() {
+    return ((getRecordCount() == 0)?true:false);
+}
+
 int VanityDB::getRecordCount() {
     return records.count();
 }
@@ -50,13 +54,9 @@ QByteArray VanityDB::getEncryptedData(QString password) {
 }
 
 QString VanityDB::getRecord(int recordNumber, VanityDBFields field) {
-    if (recordNumber<getRecordCount()) {
-        QStringList recordFields = records.at(recordNumber).split(fieldDelim);
-        if(field<recordFields.size())
-            return recordFields.at(field);
-        else
-            return "";
-    } else
+    if (!isEmpty())
+        return records.at(recordNumber).split(fieldDelim).at(field);
+    else
         return "";
 }
 
@@ -106,6 +106,8 @@ void VanityDB::removeAllRecords(QString networkByte,
                                 QString privateKey,
                                 QString publicKey) {
 
+    if (isEmpty())
+        return;
 
     QStringList searchFields = (QStringList()
                                 << networkByte
@@ -113,7 +115,7 @@ void VanityDB::removeAllRecords(QString networkByte,
                                 << privateKey
                                 << publicKey);
 
-    for (int i=0; i<records.count(); i++) {
+    for (int i=0; i<getRecordCount(); i++) {
         QStringList recordFields = records.at(i).split(fieldDelim);
         int cFields = 0, cMatched = 0;
         for (int j=0; j<recordFields.count(); j++) {
@@ -137,7 +139,6 @@ QByteArray VanityDB::AESCrypt(const QByteArray input, QString password, bool dec
     unsigned char ivector[32];
     int cLen = 0, fLen = 0;
     EVP_CIPHER_CTX cipherContext;
-
 
     EVP_CIPHER_CTX_init( &cipherContext );
     output.resize(input.length() + AES_BLOCK_SIZE + 100);

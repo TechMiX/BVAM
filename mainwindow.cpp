@@ -380,11 +380,11 @@ void MainWindow::removeActionSlot() {
                                  tr("'?\nYour keys for this address will be removed too!"),
                                  QMessageBox::Cancel,
                                  QMessageBox::Ok) == QMessageBox::Ok) {
-            prefixTable.removeRow(ui->tableView->selectionModel()->currentIndex().row());
             dataBase.removeAllRecords(ui->tableView->selectionModel()->selectedRows(0).at(0).data(0).toString(),
                                       selection.at(0).data(0).toString(),
                                       ui->tableView->selectionModel()->selectedRows(2).at(0).data(0).toString(),
                                       ui->tableView->selectionModel()->selectedRows(3).at(0).data(0).toString());
+            prefixTable.removeRow(ui->tableView->selectionModel()->currentIndex().row());
         }
 }
 
